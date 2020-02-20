@@ -1,0 +1,37 @@
+from flask import Flask, abort, url_for
+import db
+
+app = Flask(__name__)
+
+
+@app.route("/")
+def index():
+    html = ['<ul>']
+    for user in db.users.items() :
+        html.append(
+            f"<li><a href = '{url_for('user', username = user[0])}'> {user[1]['name']} </a></li>"
+        )
+    html.append('</ul>')
+    
+    return '\n'.join(html)
+
+def profile(username):
+    user = db.users.get(username)
+
+    if user:
+        return f"""
+            <h1> {user['name']} </h1> <br/>
+            Telefone : {user['telefone']} <br/>
+            <a href = '/'> Voltar </a>
+        """
+    else:
+        return abort(404, "User not found")
+
+
+@app.route('/home/<string:name>')
+def hello_name(name):
+    return "Hello " + name
+
+
+app.add_url_rule("/user/<username>/", view_func = profile, endpoint = 'user')
+app.run(use_reloader= True)
