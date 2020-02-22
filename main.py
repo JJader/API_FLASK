@@ -1,10 +1,10 @@
+import os
+
 from datetime import datetime
 
 from flask import Flask, render_template, request, redirect, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-
-
 
 import json
 
@@ -70,6 +70,15 @@ class Pontos(db.Model):
     def __repr__(self):
         return ("id: " + str(self.id) + " Valor: " + str(self.value))
 
+
+class Usuarios(db.Model):
+    id = db.Column(db.Integer, primary_key= True)
+    password = db.Column(db.String(100), nullable = False)
+    user = db.Column(db.String(100), nullable = False)
+    nome = db.Column(db.String(100), nullable = False)
+    
+    def __repr__(self):
+        return ("id: " + str(self.id) + " User: " + str(self.user))
 
 #Schema
 class Rota_Schema(ma.SQLAlchemyAutoSchema):
@@ -171,8 +180,7 @@ def conf_ponto():
         
         for elem in data:
             elem_json = ponto_json.dump(elem)
-            #elem_json['alunos'] = conf_aluno(elem['alunos'])['alunos']
-            print(elem.alunos)
+
             elem_json['alunos'] = conf_aluno(elem.alunos)['alunos']
             output.append(elem_json)
 
@@ -199,7 +207,36 @@ def set_rota():
 
     return jsonify(retorno), 202
 
+def verify_password(username, password):
+    user = Usuarios.query.filter_by(user = username).first()
+    if user and user.password == password:
+            return (True, user)
+
+    return (False, None)
+    
+    
+@app.route('/login', methods = ['POST', 'GET'])
+def validar_usuario():
+
+    data = request.get_json()
+    
+    username = data['user']
+    password = data['password']
+    
+    if username is None or password is None:
+        return jsonify(-1) , 404
+    
+    (validation ,user) = verify_password(username, password)
+    
+    if validation :
+        print(user)
+        retorno = {'id' : user.id, 'nome' : user.nome} 
+        return jsonify(retorno),202
+    else:
+        return jsonify(-1), 404
+    
 if __name__ == "__main__":
     db.create_all()
+    os.system("clear")
     app.run(host = '0.0.0.0',use_reloader= True, debug= True)
     
