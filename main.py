@@ -66,10 +66,23 @@ class Pontos(db.Model):
     id = db.Column(db.Integer, primary_key= True)
     value = db.Column(db.String(100), nullable = False)
     alunos = db.relationship('Alunos', backref = 'aluno_id')
+    lat = db.Column(db.Float, nullable = True)
+    lon = db.Column(db.Float, nullable = True)
     
+
     def __repr__(self):
         return ("id: " + str(self.id) + " Valor: " + str(self.value))
 
+class Chegadas(db.Model):
+    id = db.Column(db.Integer, primary_key= True)
+    value = db.Column(db.String(100), nullable = False)
+    status = db.Column(db.Integer, nullable = False)
+    lat = db.Column(db.Float, nullable = True)
+    lon = db.Column(db.Float, nullable = True)
+    
+
+    def __repr__(self):
+        return ("id: " + str(self.id) + " Valor: " + str(self.value))
 
 class Usuarios(db.Model):
     id = db.Column(db.Integer, primary_key= True)
@@ -101,6 +114,9 @@ class Ponto_Schema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Pontos
 
+class Chegada_Schema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Chegadas
 #rotinas
 @app.route('/rotas.json')
 def get_rotas():
@@ -159,6 +175,7 @@ def conf_aluno(aluno_query):
 
     return x.copy()
 
+
 @app.route('/alunos.json', methods = ['POST', 'GET'])
 def get_aluno():
     if request.method == 'GET':
@@ -168,6 +185,13 @@ def get_aluno():
         
         return jsonify(x),200
         
+
+def modifica_presenca(id, presenca):
+
+    aluno = Alunos.query.filter_by(id = id).first()
+    aluno.presenca = presenca
+    db.session.commit()
+
 
 @app.route('/pontos.json', methods = ['POST', 'GET'])
 def conf_ponto():
@@ -187,6 +211,58 @@ def conf_ponto():
         x = {'pontos' : output }
         return jsonify(x),200
 
+    elif request.method == 'POST':
+
+        alunos_embarcados = request.get_json()
+        print(alunos_embarcados)
+
+        for aluno in alunos_embarcados['alunos']:
+            id = aluno['id']
+            presenca = aluno['presenca']
+            modifica_presenca(id, presenca)
+
+        
+        return '1',200
+
+
+@app.route('/chegada.json', methods = ['POST', 'GET'])
+def conf_chegada():
+    if request.method == 'GET':
+        
+        data = Chegadas.query.all()
+        chegada_json = Chegada_Schema()
+        
+        output = []
+        
+        for elem in data:
+            elem_json = chegada_json.dump(elem)
+
+            #elem_json['alunos'] = conf_aluno(elem.alunos)['alunos']
+            output.append(elem_json)
+
+        x = {'chegadas' : output }
+        return jsonify(x),200
+
+    elif request.method == 'POST':
+        """
+            {
+                id : 
+                status : 
+            }
+        """
+        data = request.get_json()
+        print(atualizacao_chegada)
+        
+        id = data['id']
+        status = data['status']
+        
+        chegada = Chegadas.query.filter_by(id = id).first()
+        chegada.status = status
+        db.session.commit()
+
+        
+        return '1',200
+
 
 @app.route('/registrar/rota', methods = ['POST'])
 def set_rota():
@@ -205,7 +281,7 @@ def set_rota():
     #db.session.add(Blog_post.query.get(id))
     db.session.commit()
 
-    return jsonify(retorno), 202
+    return jsonify(retorno), 200
 
 def verify_password(username, password):
     user = Usuarios.query.filter_by(user = username).first()
@@ -231,7 +307,7 @@ def validar_usuario():
     if validation :
         print(user)
         retorno = {'id' : user.id, 'nome' : user.nome} 
-        return jsonify(retorno),202
+        return jsonify(retorno),200
     else:
         return jsonify(-1), 404
     
